@@ -1,0 +1,1023 @@
+openapi: 3.0.3
+info:
+  title: Alimenti API
+  description: >
+    API REST per la gestione di alimenti (composizione CREA/INRAN), tabelle
+    di riferimento LARN, ricette, pazienti con piani alimentari e
+    appuntamenti, piramide Smartfood. Trasformazione in API REST
+    dell'applicativo "Registro Alimenti" (Project Work — Sviluppo di
+    un'applicazione full-stack API-based per un'organizzazione del settore
+    sanitario, CdS Informatica per le Aziende Digitali).
+
+    Autenticazione: un singolo utente amministratore. Le operazioni di sola
+    lettura su alimenti, LARN, ricette e smartfood sono pubbliche; le
+    operazioni di scrittura su questi moduli e TUTTE le operazioni sui
+    pazienti (dati clinici) richiedono il login (vedi /auth/login). La
+    sessione e' mantenuta con un cookie firmato.
+  version: "1.0.0"
+servers:
+  - url: /api
+    description: Stesso host del front-end (modalita' consigliata)
+
+tags:
+  - name: Autenticazione
+  - name: Alimenti
+  - name: LARN
+  - name: Ricette
+  - name: Smartfood
+  - name: Pazienti
+  - name: Piani alimentari
+  - name: Appuntamenti
+
+security:
+  - cookieAuth: []
+
+paths:
+  # ------------------------------------------------------------------
+  # Autenticazione
+  # ------------------------------------------------------------------
+  /auth/login:
+    post:
+      tags: [Autenticazione]
+      summary: Accedi come amministratore
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: admin }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Login riuscito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logged_in: { type: boolean }
+                  username: { type: string }
+        "401":
+          description: Credenziali non corrette
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Errore" } }
+
+  /auth/logout:
+    post:
+      tags: [Autenticazione]
+      summary: Termina la sessione
+      responses:
+        "200": { description: Logout eseguito }
+
+  /auth/me:
+    get:
+      tags: [Autenticazione]
+      summary: Stato di autenticazione corrente
+      security: []
+      responses:
+        "200":
+          description: Stato corrente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logged_in: { type: boolean }
+                  username: { type: string, nullable: true }
+
+  # ------------------------------------------------------------------
+  # Alimenti
+  # ------------------------------------------------------------------
+  /alimenti:
+    get:
+      tags: [Alimenti]
+      summary: Elenco paginato degli alimenti
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/q"
+        - name: categoria
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/page"
+      responses:
+        "200":
+          description: Elenco alimenti
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginaMeta"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/AlimentoSintetico" }
+    post:
+      tags: [Alimenti]
+      summary: Crea un alimento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AlimentoInput" }
+      responses:
+        "201":
+          description: Alimento creato
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Alimento" } }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /alimenti/categorie:
+    get:
+      tags: [Alimenti]
+      summary: Valori distinti di categoria
+      security: []
+      responses:
+        "200":
+          description: Elenco categorie
+          content:
+            application/json: { schema: { type: array, items: { type: string } } }
+
+  /alimenti/campi:
+    get:
+      tags: [Alimenti]
+      summary: Metadati dei campi (per generare form lato client)
+      security: []
+      responses:
+        "200": { description: Metadati raggruppati per sezione }
+
+  /alimenti/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [Alimenti]
+      summary: Dettaglio alimento
+      security: []
+      responses:
+        "200":
+          description: Alimento
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Alimento" } }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Alimenti]
+      summary: Aggiorna un alimento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AlimentoInput" }
+      responses:
+        "200":
+          description: Alimento aggiornato
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Alimento" } }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Alimenti]
+      summary: Elimina un alimento
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # LARN (generico su 15 tabelle)
+  # ------------------------------------------------------------------
+  /larn/tables:
+    get:
+      tags: [LARN]
+      summary: Elenco delle 15 tabelle LARN disponibili, con metadati
+      security: []
+      responses:
+        "200": { description: Elenco tabelle }
+
+  /larn/{table_key}:
+    parameters:
+      - $ref: "#/components/parameters/tableKeyPath"
+    get:
+      tags: [LARN]
+      summary: Elenco righe di una tabella LARN (con filtri)
+      security: []
+      responses:
+        "200": { description: Elenco righe }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    post:
+      tags: [LARN]
+      summary: Crea una riga nella tabella LARN indicata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: "Campi specifici della tabella, vedi GET /larn/tables" }
+      responses:
+        "201": { description: Riga creata }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /larn/{table_key}/{id}:
+    parameters:
+      - $ref: "#/components/parameters/tableKeyPath"
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [LARN]
+      summary: Dettaglio riga
+      security: []
+      responses:
+        "200": { description: Riga }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [LARN]
+      summary: Aggiorna una riga
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: Riga aggiornata }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [LARN]
+      summary: Elimina una riga
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # Ricette
+  # ------------------------------------------------------------------
+  /ricette:
+    get:
+      tags: [Ricette]
+      summary: Elenco paginato ricette (con filtri dieta/categoria/difficolta)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/q"
+        - $ref: "#/components/parameters/page"
+        - name: categoria_ricetta
+          in: query
+          schema: { type: string }
+        - name: difficolta
+          in: query
+          schema: { type: string, enum: [Facile, Media, Difficile] }
+        - name: vegano
+          in: query
+          schema: { type: string, enum: ["0", "1"] }
+        - name: vegetariano
+          in: query
+          schema: { type: string, enum: ["0", "1"] }
+        - name: senza_glutine
+          in: query
+          schema: { type: string, enum: ["0", "1"] }
+      responses:
+        "200": { description: Elenco ricette }
+    post:
+      tags: [Ricette]
+      summary: Crea una ricetta (senza ingredienti)
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/RicettaInput" } }
+      responses:
+        "201":
+          description: Ricetta creata
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Ricetta" } }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /ricette/campi:
+    get:
+      tags: [Ricette]
+      summary: Metadati campi ricetta + categorie/difficolta ammesse
+      security: []
+      responses:
+        "200": { description: Metadati }
+
+  /ricette/alimenti-options:
+    get:
+      tags: [Ricette]
+      summary: (codice_alimento, nome_alimento) per popolare una tendina ingredienti
+      security: []
+      responses:
+        "200": { description: Elenco opzioni }
+
+  /ricette/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [Ricette]
+      summary: Dettaglio ricetta (testata)
+      security: []
+      responses:
+        "200":
+          description: Ricetta
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Ricetta" } }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Ricette]
+      summary: Aggiorna la testata di una ricetta
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/RicettaInput" } }
+      responses:
+        "200": { description: Ricetta aggiornata }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Ricette]
+      summary: Elimina una ricetta (CASCADE sugli ingredienti)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /ricette/{id}/valori-calcolati:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Ricette]
+      summary: Valori nutrizionali per porzione calcolati "a volo" dagli ingredienti (non salva)
+      security: []
+      responses:
+        "200": { description: Valori calcolati }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /ricette/{id}/ricalcola:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    post:
+      tags: [Ricette]
+      summary: Ricalcola e SALVA i valori per porzione dagli ingredienti collegati
+      responses:
+        "200": { description: Ricetta aggiornata con i nuovi valori }
+        "400": { description: Nessun ingrediente collegato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /ricette/{id}/ingredienti:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Ricette]
+      summary: Ingredienti della ricetta (con nome e kcal da alimenti)
+      security: []
+      responses:
+        "200": { description: Elenco ingredienti }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    post:
+      tags: [Ricette]
+      summary: Aggiungi un ingrediente
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/RicettaIngredienteInput" } }
+      responses:
+        "201": { description: Ingrediente aggiunto }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /ricette/{id}/ingredienti/{ing_id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: ing_id
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      tags: [Ricette]
+      summary: Modifica un ingrediente
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/RicettaIngredienteInput" } }
+      responses:
+        "200": { description: Ingrediente aggiornato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Ricette]
+      summary: Rimuovi un ingrediente
+      responses:
+        "204": { description: Rimosso }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # Smartfood
+  # ------------------------------------------------------------------
+  /smartfood/fasce:
+    get:
+      tags: [Smartfood]
+      summary: Le 4 fasce della piramide (giornaliera/settimanale/occasionale/evitare)
+      security: []
+      responses:
+        "200": { description: Fasce }
+
+  /smartfood/campi:
+    get:
+      tags: [Smartfood]
+      summary: Metadati campi
+      security: []
+      responses:
+        "200": { description: Metadati }
+
+  /smartfood/gruppi:
+    get:
+      tags: [Smartfood]
+      summary: Valori distinti di gruppo_alimenti
+      security: []
+      responses:
+        "200": { description: Elenco gruppi }
+
+  /smartfood:
+    get:
+      tags: [Smartfood]
+      summary: Elenco righe (con filtri)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/q"
+        - name: frequenza
+          in: query
+          schema: { type: string }
+        - name: gruppo
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: Elenco righe }
+    post:
+      tags: [Smartfood]
+      summary: Crea una riga
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/SmartfoodInput" } }
+      responses:
+        "201": { description: Riga creata }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /smartfood/{id}:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Smartfood]
+      summary: Dettaglio riga
+      security: []
+      responses:
+        "200": { description: Riga }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Smartfood]
+      summary: Aggiorna una riga
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/SmartfoodInput" } }
+      responses:
+        "200": { description: Riga aggiornata }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Smartfood]
+      summary: Elimina una riga
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # Pazienti
+  # ------------------------------------------------------------------
+  /pazienti:
+    get:
+      tags: [Pazienti]
+      summary: Elenco paginato pazienti (richiede login)
+      parameters:
+        - $ref: "#/components/parameters/q"
+        - $ref: "#/components/parameters/page"
+        - name: attivi
+          in: query
+          schema: { type: string, enum: ["0", "1"], default: "1" }
+      responses:
+        "200": { description: Elenco pazienti }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+    post:
+      tags: [Pazienti]
+      summary: Crea un paziente
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/PazienteInput" } }
+      responses:
+        "201":
+          description: Paziente creato
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Paziente" } }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /pazienti/campi:
+    get:
+      tags: [Pazienti]
+      summary: Metadati campi paziente/piano/giorno
+      responses:
+        "200": { description: Metadati }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /pazienti/{id}:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Pazienti]
+      summary: Dettaglio paziente
+      responses:
+        "200":
+          description: Paziente
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Paziente" } }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Pazienti]
+      summary: Aggiorna un paziente
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/PazienteInput" } }
+      responses:
+        "200": { description: Paziente aggiornato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Pazienti]
+      summary: Elimina un paziente (CASCADE su piani e appuntamenti)
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/larn:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Pazienti]
+      summary: Fabbisogno di riferimento (energia/proteine/acqua) calcolato dalle tabelle LARN in base al profilo del paziente
+      responses:
+        "200": { description: Riferimenti LARN calcolati }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/appuntamenti:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Pazienti]
+      summary: Appuntamenti di un paziente
+      responses:
+        "200": { description: Elenco appuntamenti }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # Piani alimentari e giorni
+  # ------------------------------------------------------------------
+  /pazienti/{id}/piani:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Piani alimentari]
+      summary: Elenco piani del paziente
+      responses:
+        "200": { description: Elenco piani }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+    post:
+      tags: [Piani alimentari]
+      summary: Crea un piano (genera automaticamente i 7 giorni della settimana)
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/PianoInput" } }
+      responses:
+        "201": { description: Piano creato, con i 7 giorni gia' predisposti }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /pazienti/{id}/piani/{piano_id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: piano_id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Piani alimentari]
+      summary: Dettaglio piano + panoramica dei 7 giorni
+      responses:
+        "200": { description: Piano e giorni }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Piani alimentari]
+      summary: Aggiorna l'intestazione del piano
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/PianoInput" } }
+      responses:
+        "200": { description: Piano aggiornato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Piani alimentari]
+      summary: Elimina il piano (CASCADE sui 7 giorni)
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/piani/{piano_id}/giorni/{giorno}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: piano_id
+        in: path
+        required: true
+        schema: { type: integer }
+      - $ref: "#/components/parameters/giornoPath"
+    get:
+      tags: [Piani alimentari]
+      summary: Dettaglio di un giorno (pasti testuali + alimenti collegati + kcal/proteine)
+      responses:
+        "200": { description: Dettaglio giorno }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Piani alimentari]
+      summary: Aggiorna la descrizione testuale dei pasti del giorno
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { type: object, description: "Uno o piu' campi pasto (es. colazione_latte, pranzo_primo, ...): vedi GET /pazienti/campi" } }
+      responses:
+        "200": { description: Giorno aggiornato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/piani/{piano_id}/giorni/{giorno}/ricalcola-kcal:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: piano_id
+        in: path
+        required: true
+        schema: { type: integer }
+      - $ref: "#/components/parameters/giornoPath"
+    post:
+      tags: [Piani alimentari]
+      summary: Ricalcola e SALVA le kcal totali del giorno dagli alimenti collegati ai pasti
+      responses:
+        "200": { description: "kcal_stimate aggiornate" }
+        "400": { description: Nessun alimento collegato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/piani/{piano_id}/giorni/{giorno}/alimenti:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: piano_id
+        in: path
+        required: true
+        schema: { type: integer }
+      - $ref: "#/components/parameters/giornoPath"
+    post:
+      tags: [Piani alimentari]
+      summary: Collega un alimento (con quantita' in grammi) a un pasto del giorno
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AlimentoPastoInput" } }
+      responses:
+        "201": { description: Alimento collegato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  /pazienti/{id}/piani/{piano_id}/giorni/{giorno}/alimenti/{link_id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: piano_id
+        in: path
+        required: true
+        schema: { type: integer }
+      - $ref: "#/components/parameters/giornoPath"
+      - name: link_id
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      tags: [Piani alimentari]
+      summary: Rimuove un alimento collegato a un pasto
+      responses:
+        "204": { description: Rimosso }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+  # ------------------------------------------------------------------
+  # Appuntamenti
+  # ------------------------------------------------------------------
+  /appuntamenti:
+    get:
+      tags: [Appuntamenti]
+      summary: Agenda appuntamenti su tutti i pazienti (con filtri)
+      parameters:
+        - $ref: "#/components/parameters/q"
+        - $ref: "#/components/parameters/page"
+        - name: stato
+          in: query
+          schema: { type: string, enum: [Programmato, Completato, Annullato, "Non presentato"] }
+        - name: passati
+          in: query
+          description: "1 per includere anche gli appuntamenti passati (default: solo futuri)"
+          schema: { type: string, enum: ["0", "1"], default: "0" }
+      responses:
+        "200": { description: Agenda }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+    post:
+      tags: [Appuntamenti]
+      summary: Crea un appuntamento
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AppuntamentoInput" } }
+      responses:
+        "201":
+          description: Appuntamento creato
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Appuntamento" } }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /appuntamenti/campi:
+    get:
+      tags: [Appuntamenti]
+      summary: Metadati campi + tipi/stati ammessi
+      responses:
+        "200": { description: Metadati }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+
+  /appuntamenti/{id}:
+    parameters: [ { $ref: "#/components/parameters/idPath" } ]
+    get:
+      tags: [Appuntamenti]
+      summary: Dettaglio appuntamento
+      responses:
+        "200":
+          description: Appuntamento
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Appuntamento" } }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    put:
+      tags: [Appuntamenti]
+      summary: Aggiorna un appuntamento
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AppuntamentoInput" } }
+      responses:
+        "200": { description: Appuntamento aggiornato }
+        "400": { $ref: "#/components/responses/DatiNonValidi" }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+    delete:
+      tags: [Appuntamenti]
+      summary: Elimina un appuntamento
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/NonAutenticato" }
+        "404": { $ref: "#/components/responses/NonTrovato" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Cookie di sessione impostato da POST /auth/login.
+
+  parameters:
+    q:
+      name: q
+      in: query
+      description: Ricerca libera
+      schema: { type: string }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    tableKeyPath:
+      name: table_key
+      in: path
+      required: true
+      description: 'Chiave di una delle 15 tabelle LARN (vedi GET /larn/tables), es. "proteine", "acqua", "vitamine_pri_ai".'
+      schema: { type: string }
+    giornoPath:
+      name: giorno
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [Lunedi, Martedi, Mercoledi, Giovedi, Venerdi, Sabato, Domenica]
+
+  responses:
+    NonTrovato:
+      description: Risorsa non trovata
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Errore" } }
+    NonAutenticato:
+      description: Login richiesto
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Errore" } }
+    DatiNonValidi:
+      description: Dati non validi
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/ErroreValidazione" } }
+
+  schemas:
+    Errore:
+      type: object
+      properties:
+        error: { type: string }
+
+    ErroreValidazione:
+      type: object
+      properties:
+        error: { type: string }
+        details:
+          type: array
+          items: { type: string }
+
+    PaginaMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        total_pages: { type: integer }
+        total: { type: integer }
+        page_size: { type: integer }
+
+    AlimentoSintetico:
+      type: object
+      description: Colonne principali, usate nell'elenco paginato
+      properties:
+        id: { type: integer }
+        codice_alimento: { type: string }
+        nome_alimento: { type: string }
+        categoria: { type: string }
+        energia_kcal: { type: number }
+        proteine_g: { type: number }
+        lipidi_g: { type: number }
+        carboidrati_disponibili_g: { type: number }
+
+    Alimento:
+      type: object
+      description: >
+        Scheda completa (~50 campi nutrizionali per 100 g di parte edibile:
+        energia, macronutrienti, vitamine, minerali). Vedi GET /alimenti/campi
+        per l'elenco completo con etichette e unita' di misura.
+      properties:
+        id: { type: integer }
+        codice_alimento: { type: string }
+        nome_alimento: { type: string }
+        categoria: { type: string }
+        energia_kcal: { type: number }
+        proteine_g: { type: number }
+        lipidi_g: { type: number }
+        carboidrati_disponibili_g: { type: number }
+        fibra_totale_g: { type: number }
+        sodio_mg: { type: number }
+      additionalProperties: true
+
+    AlimentoInput:
+      allOf:
+        - $ref: "#/components/schemas/Alimento"
+      description: Stessi campi di Alimento (senza "id", assegnato dal server).
+
+    RicettaInput:
+      type: object
+      required: [nome_ricetta]
+      properties:
+        nome_ricetta: { type: string }
+        categoria_ricetta: { type: string, enum: [Antipasto, Primo, Secondo, Contorno, Dolce, Colazione] }
+        difficolta: { type: string, enum: [Facile, Media, Difficile] }
+        porzioni: { type: integer, minimum: 1, default: 4 }
+        tempo_preparazione_min: { type: integer }
+        vegano: { type: boolean }
+        vegetariano: { type: boolean }
+        senza_glutine: { type: boolean }
+        procedimento: { type: string }
+
+    Ricetta:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            energia_kcal_porzione: { type: number, nullable: true }
+            proteine_g_porzione: { type: number, nullable: true }
+        - $ref: "#/components/schemas/RicettaInput"
+
+    RicettaIngredienteInput:
+      type: object
+      required: [codice_alimento, quantita_g]
+      properties:
+        codice_alimento: { type: string }
+        quantita_g: { type: number, exclusiveMinimum: 0 }
+        ordine: { type: integer }
+        note: { type: string }
+
+    SmartfoodInput:
+      type: object
+      required: [alimento, gruppo_alimenti, frequenza_consumo]
+      properties:
+        alimento: { type: string }
+        gruppo_alimenti: { type: string }
+        frequenza_consumo: { type: string, enum: [giornaliera, settimanale, occasionale, evitare] }
+        porzione_consigliata: { type: string }
+        note: { type: string }
+        ordine: { type: integer }
+
+    PazienteInput:
+      type: object
+      required: [nome, cognome]
+      properties:
+        nome: { type: string }
+        cognome: { type: string }
+        data_nascita: { type: string, format: date }
+        sesso: { type: string, enum: [M, F] }
+        altezza_cm: { type: number }
+        peso_kg: { type: number }
+        livello_attivita_fisica:
+          type: string
+          description: "Coefficiente PAL (es. 1.4, 1.6, 1.8, 2.0)"
+        telefono: { type: string }
+        email: { type: string }
+        note_cliniche: { type: string }
+        attivo: { type: boolean, default: true }
+
+    Paziente:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+        - $ref: "#/components/schemas/PazienteInput"
+
+    PianoInput:
+      type: object
+      properties:
+        titolo: { type: string }
+        data_inizio: { type: string, format: date }
+        note: { type: string }
+        attivo: { type: boolean, default: true }
+
+    AlimentoPastoInput:
+      type: object
+      required: [pasto, codice_alimento, quantita_g]
+      properties:
+        pasto: { type: string, enum: [colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena] }
+        codice_alimento: { type: string }
+        quantita_g: { type: number, exclusiveMinimum: 0 }
+        note: { type: string }
+
+    AppuntamentoInput:
+      type: object
+      required: [paziente_id, data_ora]
+      properties:
+        paziente_id: { type: integer }
+        data_ora: { type: string, format: date-time }
+        tipo: { type: string, description: 'es. "Prima visita", "Controllo"' }
+        stato: { type: string, enum: [Programmato, Completato, Annullato, "Non presentato"], default: Programmato }
+        note: { type: string }
+
+    Appuntamento:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            paziente_nome: { type: string }
+            paziente_cognome: { type: string }
+        - $ref: "#/components/schemas/AppuntamentoInput"
