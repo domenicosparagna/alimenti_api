@@ -609,7 +609,7 @@ paths:
         content:
           application/json: { schema: { $ref: "#/components/schemas/PianoInput" } }
       responses:
-        "201": { description: Piano creato, con i 7 giorni gia' predisposti }
+        "201": { description: "Piano creato, con i 7 giorni gia' predisposti" }
         "400": { $ref: "#/components/responses/DatiNonValidi" }
         "401": { $ref: "#/components/responses/NonAutenticato" }
 
@@ -946,7 +946,7 @@ components:
       required: [codice_alimento, quantita_g]
       properties:
         codice_alimento: { type: string }
-        quantita_g: { type: number, exclusiveMinimum: 0 }
+        quantita_g: { type: number, minimum: 0, exclusiveMinimum: true }
         ordine: { type: integer }
         note: { type: string }
 
@@ -998,9 +998,9 @@ components:
       type: object
       required: [pasto, codice_alimento, quantita_g]
       properties:
-        pasto: { type: string, enum: [colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena] }
+        pasto: { type: string, enum: [colazione, spuntino_10_30, pranzo, merenda_17_30, cena] }
         codice_alimento: { type: string }
-        quantita_g: { type: number, exclusiveMinimum: 0 }
+        quantita_g: { type: number, minimum: 0, exclusiveMinimum: true }
         note: { type: string }
 
     AppuntamentoInput:
