@@ -826,8 +826,8 @@ Pages.smartfoodMenu = async function (params) {
         <thead><tr><th>Alimento</th><th>Gruppo</th><th>Porzione</th><th>Quante volte</th><th></th></tr></thead>
         <tbody>
           ${
-            data.length
-              ? data
+            data.items.length
+              ? data.items
                   .map(
                     (r) => h`<tr>
                 <td class="food-name"><a href="#/smartfood/${r.id}">${esc(r.alimento)}</a></td>
