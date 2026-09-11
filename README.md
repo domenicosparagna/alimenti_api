@@ -11,7 +11,6 @@ il front-end parla esclusivamente con `/api/*` via `fetch()`.
 
 ## Indice
 
-- [Perché questa architettura](#perché-questa-architettura)
 - [Architettura](#architettura)
 - [Struttura del progetto](#struttura-del-progetto)
 - [Avvio in locale](#avvio-in-locale)
@@ -20,21 +19,6 @@ il front-end parla esclusivamente con `/api/*` via `fetch()`.
 - [Estendere il front-end](#estendere-il-front-end)
 - [Verifica e test](#verifica-e-test)
 - [Distribuzione online](#distribuzione-online)
-- [Mappatura con la traccia del Project Work](#mappatura-con-la-traccia-del-project-work)
-
-## Perché questa architettura
-
-Questo progetto nasce dalla trasformazione di una prima versione
-dell'applicativo (un'app Flask a pagine renderizzate lato server, senza
-API né JavaScript) verso un'architettura **API-based**, in linea con la
-traccia del Project Work: un backend che espone solo JSON e un front-end
-statico e indipendente che lo consuma. Dati e logica di dominio (calcolo
-LARN, ricalcolo nutrizionale delle ricette, kcal dei piani) sono rimasti
-gli stessi; ciò che è cambiato è come sono organizzati ed esposti — in
-particolare i quattro punti su cui la versione originale non era allineata
-alla traccia: architettura API-based/RESTful, backend object-oriented,
-front-end con JavaScript reale, e documentazione delle API in stile
-Swagger. Tutti e quattro sono risolti nella struttura descritta sotto.
 
 ## Architettura
 
@@ -46,9 +30,8 @@ Tre livelli netti:
   per le 15 tabelle LARN), ciascuna responsabile della propria validazione,
   lettura/scrittura su database e calcoli di dominio (fabbisogno LARN di un
   paziente, valori nutrizionali di una ricetta, kcal di un piano). Le 15
-  tabelle LARN condividono un'unica classe generica, seguendo lo stesso
-  principio di "un'unica implementazione per casi simili" con cui erano
-  già state pensate in origine — solo spostato da funzioni a un oggetto.
+  tabelle LARN condividono un'unica classe generica, un'unica
+  implementazione per tutti i casi che seguono la stessa struttura.
 - **`api/`** — blueprint Flask, uno per area applicativa, che rispondono
   solo `jsonify(...)`: leggono la richiesta, chiamano un metodo di un
   modello, restituiscono JSON con lo status HTTP appropriato. Restano
@@ -155,8 +138,7 @@ creazione di un paziente end-to-end con piano, alimenti collegati e
 appuntamento), tutti superati.
 
 `smoke_test.py` è incluso come script di verifica opzionale (richiede solo
-la libreria `requests`): non è richiesto dalla traccia e può essere
-rimosso senza conseguenze.
+la libreria `requests`): può essere rimosso senza conseguenze.
 
 ```bash
 python3 app.py &          # avvia il server in background
@@ -169,20 +151,3 @@ Per l'installazione su PythonAnywhere, vedi `README_PYTHONANYWHERE.md`:
 copre creazione del virtualenv, configurazione del database MySQL, file
 WSGI completo, tabella di tutte le variabili di configurazione e
 risoluzione dei problemi più comuni.
-
-## Mappatura con la traccia del Project Work
-
-| Richiesta della traccia | Come è soddisfatta |
-|---|---|
-| Applicazione full-stack **API-based** | `frontend/` (statico) e `api/` (JSON) disaccoppiati: il front-end non riceve mai HTML dal server |
-| Backend **RESTful** | Risorse su URL prevedibili, verbi HTTP corretti (GET/POST/PUT/DELETE), status code coerenti |
-| Front-end HTML, CSS, **JavaScript** | `frontend/`: HTML + CSS + JavaScript puro, nessun framework, nessun codice server nel markup |
-| Backend **object-oriented** | `models/`: una classe per entità, con i propri metodi di lettura/scrittura/calcolo |
-| Documentazione API **tipo Swagger** | `openapi.yaml` + Swagger UI su `/api/docs` |
-| Servizio significativo per un'organizzazione sanitaria | Gestione pazienti, piani alimentari, appuntamenti e fabbisogno nutrizionale di riferimento (LARN) per uno studio di nutrizione clinica |
-
-Restano da preparare fuori da questo codice, come parte del *rapporto* e
-non dell'applicativo: il racconto del contesto dell'organizzazione, i
-diagrammi UML/ER, il resoconto del processo di sviluppo con gli snippet
-commentati, gli screenshot del test funzionale, e la pubblicazione di
-questo codice su un repository Git.
