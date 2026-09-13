@@ -978,8 +978,8 @@ Pages.pazienteDetail = async function (params) {
             <h2>Fabbisogno di riferimento (LARN)</h2>
             <div class="larn-compare">
               <div class="larn-compare__row"><span class="larn-compare__label">Energia</span><span class="larn-compare__value">${larn.energia && larn.energia.kcal !== null ? fmtNum(larn.energia.kcal, 0) + " kcal/die" : "Dati insufficienti"}</span></div>
-              <div class="larn-compare__row"><span class="larn-compare__label">Proteine</span><span class="larn-compare__value">${larn.proteine && larn.proteine.g !== null ? fmtNum(larn.proteine.g, 0) + " g/die" : "Dati insufficienti"}</span></div>
-              <div class="larn-compare__row"><span class="larn-compare__label">Acqua</span><span class="larn-compare__value">${larn.acqua && larn.acqua.ml !== null ? fmtNum(larn.acqua.ml, 0) + " ml/die" : "Dati insufficienti"}</span></div>
+              <div class="larn-compare__row"><span class="larn-compare__label">Proteine</span><span class="larn-compare__value">${larn.proteine && larn.proteine.g_die !== null ? fmtNum(larn.proteine.g_die, 0) + " g/die" : "Dati insufficienti"}</span></div>
+              <div class="larn-compare__row"><span class="larn-compare__label">Acqua</span><span class="larn-compare__value">${larn.acqua && larn.acqua.ml_die !== null ? fmtNum(larn.acqua.ml_die, 0) + " ml/die" : "Dati insufficienti"}</span></div>
             </div>
             <p class="hint">Calcolato dalle tabelle LARN in base a eta', sesso, peso, altezza e livello di attivita' fisica del paziente.</p>
           </div>`
