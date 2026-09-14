@@ -48,7 +48,13 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 app = Flask(__name__, static_folder=None)
 app.config["SECRET_KEY"] = config.SECRET_KEY
-app.config["JSON_SORT_KEYS"] = False
+# NB: da Flask 2.3 in poi app.config["JSON_SORT_KEYS"] non ha piu' alcun
+# effetto (il vecchio meccanismo e' stato rimosso a favore del JSON
+# provider): l'ordinamento delle chiavi si controlla con app.json.sort_keys.
+# Senza questa riga jsonify() rimette in ordine alfabetico le chiavi dei
+# dict (es. pasti_labels/alimenti_per_pasto), rompendo l'ordine dei pasti
+# definito in GIORNO_SECTIONS (che segue il modulo cartaceo).
+app.json.sort_keys = False
 # SameSite=Lax e' sufficiente quando front-end e API sono sulla stessa
 # origine (la modalita' di esecuzione consigliata, vedi README_API.md).
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
