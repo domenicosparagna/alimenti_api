@@ -9,6 +9,8 @@ Backend REST in Flask (Python, orientato agli oggetti) + front-end statico
 in HTML, CSS e JavaScript puro: nessuna pagina viene generata dal server,
 il front-end parla esclusivamente con `/api/*` via `fetch()`.
 
+Documentazione API: [Swagger UI](https://domenicosparagna.pythonanywhere.com/api/docs) · [openapi.yaml](https://domenicosparagna.pythonanywhere.com/api/openapi.yaml).
+
 ## Indice
 
 - [Architettura](#architettura)

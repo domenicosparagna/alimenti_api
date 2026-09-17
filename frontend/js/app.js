@@ -31,10 +31,8 @@ function renderHeader() {
 
   qs("#site-header-inner").innerHTML = h`
     <a class="brand" href="#/">
-      <span class="brand__mark">API</span>
       <span>
-        <span class="brand__title">Registro Alimenti</span><br>
-        <span class="brand__subtitle">Front-end HTML/CSS/JS &middot; REST API</span>
+        <span class="brand__title">Registro Alimenti - Studio Nutrizionista - versione test</span>
       </span>
     </a>
     <div class="header-actions">${authHtml}</div>`;
@@ -167,6 +165,10 @@ function matchRoute(path) {
 function router() {
   renderHeader();
   const path = currentPath();
+
+  const footerDocs = qs("#footer-docs");
+  if (footerDocs) footerDocs.hidden = !AppState.user;
+
   const match = matchRoute(path);
   if (!match) {
     setContent(h`<div class="empty-state"><h2>Pagina non trovata</h2><p><a href="#/">Torna alla home</a></p></div>`);

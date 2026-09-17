@@ -238,6 +238,10 @@ a:hover { color: var(--color-accent-dark); }
   border-top: 1px solid var(--color-line);
 }
 
+.footer-docs {
+  margin-top: 6px;
+}
+
 /* ---------- Flash messages ---------- */
 
 .flash-list {

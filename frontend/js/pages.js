@@ -160,15 +160,9 @@ Pages.home = async function () {
   setContent(h`
     <div class="page-head">
       <div>
-        <p class="eyebrow">API REST + front-end HTML/CSS/JS</p>
         <h1>Registro Alimenti</h1>
       </div>
     </div>
-    <p>
-      Front-end statico che parla esclusivamente con <code>/api/*</code> (nessun HTML generato dal
-      server): apri gli strumenti di sviluppo del browser, scheda "Network", per vedere ogni azione
-      diventare una chiamata JSON.
-    </p>
     <div class="stat-strip">
       <a class="stat-card" href="#/alimenti"><span class="n">${alimenti.total}</span><span class="l">Alimenti</span></a>
       <a class="stat-card" href="#/larn"><span class="n">15</span><span class="l">Tabelle LARN</span></a>
