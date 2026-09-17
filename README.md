@@ -1,4 +1,6 @@
-# Registro Alimenti — API REST
+# Registro Alimenti - Studio Nutrizionista 
+
+
 
 Applicazione full-stack per la gestione nutrizionale di uno studio di
 dietetica/nutrizione clinica: alimenti (composizione CREA/INRAN), tabelle
@@ -9,7 +11,13 @@ Backend REST in Flask (Python, orientato agli oggetti) + front-end statico
 in HTML, CSS e JavaScript puro: nessuna pagina viene generata dal server,
 il front-end parla esclusivamente con `/api/*` via `fetch()`.
 
+
+L’applicazione è disponibile al seguente indirizzo: [Registro Alimenti](https://domenicosparagna.pythonanywhere.com/)
+
 Documentazione API: [Swagger UI](https://domenicosparagna.pythonanywhere.com/api/docs) · [openapi.yaml](https://domenicosparagna.pythonanywhere.com/api/openapi.yaml).
+
+
+**L'Applicazione è in fase di test**
 
 ## Indice
 
@@ -18,6 +26,7 @@ Documentazione API: [Swagger UI](https://domenicosparagna.pythonanywhere.com/api
 - [Avvio in locale](#avvio-in-locale)
 - [Credenziali e sicurezza](#credenziali-e-sicurezza)
 - [Documentazione API](#documentazione-api)
+- [Glossario](#glossario)
 - [Estendere il front-end](#estendere-il-front-end)
 - [Verifica e test](#verifica-e-test)
 - [Distribuzione online](#distribuzione-online)
@@ -113,6 +122,10 @@ python3 -c "from werkzeug.security import generate_password_hash as g; print(g('
 - **Spec OpenAPI**: `http://127.0.0.1:5000/api/openapi.yaml` (importabile in
   Postman/Insomnia)
 - 37 percorsi, 61 endpoint, 16 schemi dati
+
+## Glossario
+
+Sigle usate nel codice (LARN, dominio nutrizionale, architettura tecnica): vedi [glossario.md](glossario.md).
 
 ## Estendere il front-end
 
